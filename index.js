@@ -1,0 +1,56 @@
+require('dotenv').config();
+const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+const db = require('./src/database');
+
+async function main() {
+  await db.init();
+  console.log('✅ Base de données initialisée');
+
+  const client = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.GuildMessageReactions,
+      GatewayIntentBits.MessageContent,
+      GatewayIntentBits.GuildVoiceStates,
+    ],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+  });
+
+  client.commands = new Collection();
+
+  // ── Charger les commandes ──────────────────────
+  const commandsPath = path.join(__dirname, 'src', 'commands');
+  const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
+  for (const file of commandFiles) {
+    const command = require(path.join(commandsPath, file));
+    if (command.name) {
+      client.commands.set(command.name, command);
+      console.log(`  ✅ Commande chargée : !${command.name}`);
+    }
+  }
+
+  // ── Charger les événements ─────────────────────
+  const eventsPath = path.join(__dirname, 'src', 'events');
+  const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
+  for (const file of eventFiles) {
+    const event = require(path.join(eventsPath, file));
+    if (event.once) {
+      client.once(event.name, (...args) => event.execute(...args, client));
+    } else {
+      client.on(event.name, (...args) => event.execute(...args, client));
+    }
+    console.log(`  ✅ Événement chargé : ${event.name}`);
+  }
+
+  // ── Connexion ──────────────────────────────────
+  await client.login(process.env.BOT_TOKEN);
+}
+
+main().catch(err => {
+  console.error('❌ Erreur fatale :', err.message);
+  process.exit(1);
+});
