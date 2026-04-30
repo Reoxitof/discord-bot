@@ -1,58 +1,45 @@
-const initSqlJs = require('sql.js');
-const fs = require('fs');
-const path = require('path');
+const { Pool } = require('pg');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'bot.db');
+const pool = new Pool({
+  host:     process.env.PG_HOST     || 'postgres-3ixu.internal',
+  port:     parseInt(process.env.PG_PORT || '5432'),
+  database: process.env.PG_DB       || 'mydb',
+  user:     process.env.PG_USER     || 'postgres',
+  password: process.env.PG_PASSWORD || 'E9uMyIJaI4JFGWBp',
+  ssl: false
+});
 
-// S'assurer que le dossier data existe
-const dataDir = path.join(__dirname, '..', 'data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-let db = null;
-
-async function getDb() {
-  if (db) return db;
-
-  const SQL = await initSqlJs();
-
-  if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    db = new SQL.Database();
-  }
-
-  // Initialisation des tables
-  db.run(`
+async function init() {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS levels (
       user_id TEXT NOT NULL,
       guild_id TEXT NOT NULL,
       xp INTEGER DEFAULT 0,
       level INTEGER DEFAULT 0,
       messages INTEGER DEFAULT 0,
-      last_xp INTEGER DEFAULT 0,
+      last_xp BIGINT DEFAULT 0,
       PRIMARY KEY (user_id, guild_id)
     );
 
     CREATE TABLE IF NOT EXISTS giveaways (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       message_id TEXT UNIQUE,
       channel_id TEXT,
       guild_id TEXT,
       prize TEXT,
       winners INTEGER DEFAULT 1,
-      end_time INTEGER,
+      end_time BIGINT,
       ended INTEGER DEFAULT 0,
       host_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS warns (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id TEXT,
       guild_id TEXT,
       reason TEXT,
       moderator_id TEXT,
-      timestamp INTEGER
+      timestamp BIGINT
     );
 
     CREATE TABLE IF NOT EXISTS reaction_roles (
@@ -62,57 +49,36 @@ async function getDb() {
       PRIMARY KEY (message_id, emoji)
     );
   `);
-
-  save();
-  return db;
+  console.log('✅ PostgreSQL prêt');
 }
 
-function save() {
-  if (!db) return;
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
+// Helper: convertit les ? en $1, $2...
+function toPg(sql) {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
 }
 
-// Sauvegarde automatique toutes les 30 secondes
-setInterval(save, 30000);
-
-// Wrappers synchrones pour simplifier l'usage
-const dbProxy = {
+// Interface compatible avec l'ancien dbProxy (synchrone simulé via proxy async)
+const db = {
   prepare: (sql) => ({
-    run: (...params) => {
-      if (!db) throw new Error('DB non initialisée');
-      db.run(sql, params);
-      save();
+    run: async (...params) => {
+      await pool.query(toPg(sql), params);
     },
-    get: (...params) => {
-      if (!db) throw new Error('DB non initialisée');
-      const stmt = db.prepare(sql);
-      stmt.bind(params);
-      if (stmt.step()) {
-        const row = stmt.getAsObject();
-        stmt.free();
-        return row;
-      }
-      stmt.free();
-      return null;
+    get: async (...params) => {
+      const res = await pool.query(toPg(sql), params);
+      return res.rows[0] || null;
     },
-    all: (...params) => {
-      if (!db) throw new Error('DB non initialisée');
-      const results = [];
-      const stmt = db.prepare(sql);
-      stmt.bind(params);
-      while (stmt.step()) results.push(stmt.getAsObject());
-      stmt.free();
-      return results;
+    all: async (...params) => {
+      const res = await pool.query(toPg(sql), params);
+      return res.rows;
     },
   }),
-  exec: (sql) => {
-    if (!db) throw new Error('DB non initialisée');
-    db.run(sql);
-    save();
+  exec: async (sql) => {
+    await pool.query(sql);
   },
-  init: getDb,
-  save,
+  init,
+  save: () => {}, // no-op avec Postgres
+  pool,
 };
 
-module.exports = dbProxy;
+module.exports = db;
