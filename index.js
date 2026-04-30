@@ -2,7 +2,17 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
 const db = require('./src/database');
+
+// Serveur HTTP minimal pour Sliplane healthcheck
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('OK');
+}).listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Healthcheck server listening on 0.0.0.0:${PORT}`);
+});
 
 async function main() {
   await db.init();
