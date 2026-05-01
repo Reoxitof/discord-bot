@@ -21,7 +21,7 @@ let liveMessageId = null;
 
 async function checkLiveStatus(client) {
   try {
-    const CHANNEL_ID = process.env.LIVE_ALERT_CHANNEL_ID;
+    const CHANNEL_ID = process.env.LIVE_ALERT_CHANNEL_ID || '1499144758491217930';
     if (!CHANNEL_ID) return;
 
     const stream = await isLive();
