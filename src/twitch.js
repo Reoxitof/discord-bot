@@ -2,13 +2,20 @@ const https = require('https');
 
 const TWITCH_CLIENT_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
-const TWITCH_USERNAME = process.env.TWITCH_USERNAME || 'reoxitof018';
+const TWITCH_USERNAME = process.env.TWITCH_USERNAME || 'reoxitof';
 
 let accessToken = null;
 let tokenExpiry = 0;
 
 async function getAccessToken() {
   if (accessToken && Date.now() < tokenExpiry) return accessToken;
+
+  // Si pas de client secret, utilise l'app token hardcodé (généré manuellement)
+  if (!TWITCH_CLIENT_SECRET) {
+    accessToken = process.env.TWITCH_APP_TOKEN || '3d9gup04ollvbbpuzem1hu8iy1n2dj';
+    tokenExpiry = Date.now() + 60 * 24 * 3600 * 1000; // 60 jours
+    return accessToken;
+  }
 
   return new Promise((resolve, reject) => {
     const postData = `client_id=${TWITCH_CLIENT_ID}&client_secret=${TWITCH_CLIENT_SECRET}&grant_type=client_credentials`;

@@ -156,9 +156,11 @@ module.exports = {
     await setupCounters(client);
 
     // ── Surveillance Twitch ───────────────────────
-    if (process.env.TWITCH_CLIENT_ID && process.env.TWITCH_CLIENT_SECRET) {
+    if (process.env.TWITCH_CLIENT_ID) {
       const liveAlert = require('./liveAlert');
       liveAlert.start(client);
+    } else {
+      console.log('⚠️ TWITCH_CLIENT_ID manquant — alertes live désactivées');
     }
 
     // ── Surveillance YouTube ──────────────────────
