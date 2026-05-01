@@ -10,7 +10,7 @@ module.exports = {
   description: 'Affiche ton niveau et ton XP',
   async execute(message, args) {
     const target = message.mentions.users.first() || message.author;
-    const row = db.prepare(
+    const row = await db.prepare(
       'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?'
     ).get(target.id, message.guild.id);
 
@@ -22,8 +22,7 @@ module.exports = {
     const progress = Math.floor((row.xp / xpNeeded) * 20);
     const bar = '█'.repeat(progress) + '░'.repeat(20 - progress);
 
-    // Classement
-    const allRows = db.prepare(
+    const allRows = await db.prepare(
       'SELECT user_id FROM levels WHERE guild_id = ? ORDER BY xp DESC'
     ).all(message.guild.id);
     const rank = allRows.findIndex(r => r.user_id === target.id) + 1;

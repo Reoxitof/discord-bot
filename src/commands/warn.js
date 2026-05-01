@@ -15,13 +15,14 @@ module.exports = {
 
     const reason = args.slice(1).join(' ') || 'Aucune raison fournie';
 
-    db.prepare(
+    await db.prepare(
       'INSERT INTO warns (user_id, guild_id, reason, moderator_id, timestamp) VALUES (?, ?, ?, ?, ?)'
     ).run(target.id, message.guild.id, reason, message.author.id, Date.now());
 
-    const warnCount = db.prepare(
+    const warnRow = await db.prepare(
       'SELECT COUNT(*) as count FROM warns WHERE user_id = ? AND guild_id = ?'
-    ).get(target.id, message.guild.id).count;
+    ).get(target.id, message.guild.id);
+    const warnCount = warnRow.count;
 
     const embed = new EmbedBuilder()
       .setColor(0xFFA500)

@@ -5,7 +5,7 @@ module.exports = {
   name: 'top',
   description: 'Classement des membres les plus actifs',
   async execute(message) {
-    const rows = db.prepare(
+    const rows = await db.prepare(
       'SELECT user_id, xp, level FROM levels WHERE guild_id = ? ORDER BY xp DESC LIMIT 10'
     ).all(message.guild.id);
 

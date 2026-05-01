@@ -61,7 +61,7 @@ module.exports = {
     client.spamMap.set(key, userData);
 
     // ── Système XP ────────────────────────────
-    const row = db.prepare(
+    const row = await db.prepare(
       'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?'
     ).get(message.author.id, message.guild.id);
 
@@ -76,7 +76,6 @@ module.exports = {
       let newLevel = currentLevel;
       if (currentXp >= xpNeeded) {
         newLevel = currentLevel + 1;
-        // Annonce level up
         const embed = new EmbedBuilder()
           .setColor(0xFFD700)
           .setDescription(`🎉 ${message.author} vient de passer au **niveau ${newLevel}** !`)
@@ -84,14 +83,13 @@ module.exports = {
         message.channel.send({ embeds: [embed] }).catch(() => {});
       }
 
-      db.prepare(`
+      await db.prepare(`
         INSERT INTO levels (user_id, guild_id, xp, level, messages, last_xp)
         VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(user_id, guild_id) DO UPDATE SET
-          xp = ?, level = ?, messages = ?, last_xp = ?
+          xp = excluded.xp, level = excluded.level, messages = excluded.messages, last_xp = excluded.last_xp
       `).run(
-        message.author.id, message.guild.id, currentXp, newLevel, messages, now,
-        currentXp, newLevel, messages, now
+        message.author.id, message.guild.id, currentXp, newLevel, messages, now
       );
     }
 

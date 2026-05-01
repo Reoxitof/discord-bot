@@ -12,7 +12,7 @@ module.exports = {
     const target = message.mentions.users.first();
     if (!target) return message.reply('❌ Mentionne un membre. Ex: `!warns @user`');
 
-    const rows = db.prepare(
+    const rows = await db.prepare(
       'SELECT * FROM warns WHERE user_id = ? AND guild_id = ? ORDER BY timestamp DESC'
     ).all(target.id, message.guild.id);
 

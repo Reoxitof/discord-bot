@@ -45,7 +45,7 @@ module.exports = {
     const gMsg = await message.channel.send({ embeds: [embed] });
     await gMsg.react(GIVEAWAY_EMOJI);
 
-    db.prepare(
+    await db.prepare(
       'INSERT INTO giveaways (message_id, channel_id, guild_id, prize, winners, end_time, host_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).run(gMsg.id, message.channel.id, message.guild.id, prize, winners, endTime, message.author.id);
 
@@ -91,7 +91,7 @@ async function endGiveaway(gMsg, winnersCount, prize, client) {
     await gMsg.edit({ embeds: [embed] });
     gMsg.channel.send(`🎉 Félicitations ${mentions} ! Vous avez gagné **${prize}** !`);
 
-    db.prepare('UPDATE giveaways SET ended = 1 WHERE message_id = ?').run(gMsg.id);
+    await db.prepare('UPDATE giveaways SET ended = 1 WHERE message_id = ?').run(gMsg.id);
   } catch (err) {
     console.error('Erreur fin giveaway :', err.message);
   }
