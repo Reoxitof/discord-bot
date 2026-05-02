@@ -18,7 +18,7 @@ module.exports = {
       .setTitle('🎮 Jeu en cours')
       .setDescription(`Reoxitof joue actuellement à **${currentGame}**`)
       .addFields(
-        { name: '📺 Stream', value: '[twitch.tv/reoxitof018](https://twitch.tv/reoxitof018)', inline: true }
+        { name: '📺 Stream', value: '[twitch.tv/reoxitof](https://twitch.tv/reoxitof)', inline: true }
       )
       .setFooter({ text: 'Reoxitof Gaming' })
       .setTimestamp();

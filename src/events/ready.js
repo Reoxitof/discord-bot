@@ -6,7 +6,7 @@ module.exports = {
   async execute(client) {
     console.log(`\n✅ Connecté en tant que ${client.user.tag}`);
     client.user.setPresence({
-      activities: [{ name: '🔴 reoxitof018 | !help', type: 0 }],
+      activities: [{ name: '🔴 reoxitof | !help', type: 0 }],
       status: 'online',
     });
 

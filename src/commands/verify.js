@@ -3,7 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 
 const TWITCH_CLIENT_ID     = process.env.TWITCH_CLIENT_ID;
 const TWITCH_CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
-const TWITCH_BROADCASTER_ID = process.env.TWITCH_BROADCASTER_ID; // ID numérique de reoxitof018
+const TWITCH_BROADCASTER_ID = process.env.TWITCH_BROADCASTER_ID; // ID numérique de reoxitof
 
 let appToken = null;
 let tokenExpiry = 0;
@@ -130,8 +130,8 @@ module.exports = {
           .setColor(0xFFA500)
           .setTitle('❌  Tu ne follow pas Reoxitof')
           .setDescription(
-            `Ton compte Twitch **${twitchUsername}** ne follow pas encore **reoxitof018**.\n\n` +
-            `👉 [Follow sur Twitch](https://twitch.tv/reoxitof018) puis retape \`!verify\``
+            `Ton compte Twitch **${twitchUsername}** ne follow pas encore **reoxitof**.\n\n` +
+            `👉 [Follow sur Twitch](https://twitch.tv/reoxitof) puis retape \`!verify\``
           )
           .setFooter({ text: 'Reoxitof Gaming' });
         return message.reply({ embeds: [embed] });
@@ -156,7 +156,7 @@ module.exports = {
         .setColor(0x57F287)
         .setTitle('✅  Vérification réussie !')
         .setDescription(
-          `Ton compte Twitch **${twitchUsername}** follow bien **reoxitof018** !\n\n` +
+          `Ton compte Twitch **${twitchUsername}** follow bien **reoxitof** !\n\n` +
           `Tu as reçu le rôle **${followerRole}** 🎉`
         )
         .setThumbnail(message.author.displayAvatarURL({ dynamic: true }))

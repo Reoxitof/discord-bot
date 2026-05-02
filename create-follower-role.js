@@ -17,10 +17,10 @@ async function getTwitchBroadcasterId() {
       res.on('data', c => data += c);
       res.on('end', async () => {
         const { access_token } = JSON.parse(data);
-        // Récupérer l'ID de reoxitof018
+        // Récupérer l'ID de reoxitof
         const userReq = https.request({
           hostname: 'api.twitch.tv',
-          path: `/helix/users?login=reoxitof018`,
+          path: `/helix/users?login=reoxitof`,
           method: 'GET',
           headers: {
             'Client-ID': process.env.TWITCH_CLIENT_ID,

@@ -8,7 +8,7 @@ module.exports = {
       .setColor(0xFF4500)
       .setTitle('🌐 Reoxitof — Réseaux Sociaux')
       .addFields(
-        { name: '🟣 Twitch', value: '[twitch.tv/reoxitof018](https://twitch.tv/reoxitof018)', inline: true },
+        { name: '🟣 Twitch', value: '[twitch.tv/reoxitof](https://twitch.tv/reoxitof)', inline: true },
         { name: '🔴 YouTube', value: 'Bientôt disponible', inline: true },
         { name: '🐦 Twitter/X', value: 'Bientôt disponible', inline: true },
         { name: '💬 Discord', value: '[Rejoindre le serveur](https://discord.gg/reoxitof)', inline: true },
