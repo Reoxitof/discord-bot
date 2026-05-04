@@ -26,8 +26,9 @@ async function main() {
       GatewayIntentBits.GuildMessageReactions,
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.GuildVoiceStates,
+      GatewayIntentBits.GuildMessageTyping,
     ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.ThreadMember],
   });
 
   client.commands = new Collection();
@@ -47,13 +48,20 @@ async function main() {
   const eventsPath = path.join(__dirname, 'src', 'events');
   const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
   for (const file of eventFiles) {
-    const event = require(path.join(eventsPath, file));
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args, client));
+    const eventExport = require(path.join(eventsPath, file));
+
+    // Supporte les fichiers qui exportent un tableau d'événements (ex: interimThread.js)
+    const events = Array.isArray(eventExport) ? eventExport : [eventExport];
+
+    for (const event of events) {
+      if (!event.name) continue;
+      if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args, client));
+      } else {
+        client.on(event.name, (...args) => event.execute(...args, client));
+      }
+      console.log(`  ✅ Événement chargé : ${event.name} (${file})`);
     }
-    console.log(`  ✅ Événement chargé : ${event.name}`);
   }
 
   // ── Connexion ──────────────────────────────────

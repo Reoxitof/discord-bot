@@ -2,6 +2,8 @@
  * contractParser.js
  * Parse le contenu d'un message Discord pour extraire les infos d'un profil intérimaire.
  * Supporte plusieurs formats : clé: valeur, bullet points, texte libre.
+ * Champs RP supportés : nom, prénom, poste, entreprise, id_employe, perso, compte,
+ *   date_debut, date_fin, salaire, adresse, telephone, email, notes
  */
 
 // Mots-clés qui identifient un salon comme "contrat"
@@ -34,9 +36,11 @@ function extract(text, patterns) {
 }
 
 /**
- * Parse le contenu d'un message et retourne un objet profil
+ * Parse le contenu d'un message et retourne un objet profil.
+ * @param {string} content - Contenu du message
+ * @param {string} [threadTitle] - Titre du thread/post forum (utilisé comme poste si non trouvé dans le contenu)
  */
-function parseContractMessage(content) {
+function parseContractMessage(content, threadTitle = null) {
   const text = content || '';
 
   const profile = {
@@ -114,6 +118,26 @@ function parseContractMessage(content) {
                   'commentaires?\\s*[:\\-]\\s*(.+)',
                   'infos?\\s*[:\\-]\\s*(.+)',
                   'observations?\\s*[:\\-]\\s*(.+)'
+                ]),
+    // Champs spécifiques RP
+    id_employe: extract(text, [
+                  'id\\s*employ[eé]\\s*[:\\-]\\s*(.+)',
+                  'id\\s*[:\\-]\\s*(\\d+)',
+                  'employ[eé]\\s*[:\\-]\\s*(.+)',
+                  'matricule\\s*[:\\-]\\s*(.+)',
+                  'num[eé]ro\\s*employ[eé]\\s*[:\\-]\\s*(.+)'
+                ]),
+    perso:      extract(text, [
+                  'perso\\s*[:\\-]\\s*(.+)',
+                  'personnage\\s*[:\\-]\\s*(.+)',
+                  'num[eé]ro\\s*perso\\s*[:\\-]\\s*(.+)',
+                  'perso\\s*[:\\-]\\s*([\\d\\-]+)'
+                ]),
+    compte:     extract(text, [
+                  'compte\\s*[:\\-]\\s*(.+)',
+                  'num[eé]ro\\s*compte\\s*[:\\-]\\s*(.+)',
+                  'account\\s*[:\\-]\\s*(.+)',
+                  '#\\s*(\\d+)'
                 ])
   };
 
@@ -122,6 +146,11 @@ function parseContractMessage(content) {
     if (profile[key] && profile[key].length > 200) {
       profile[key] = profile[key].substring(0, 200);
     }
+  }
+
+  // Si le poste n'est pas dans le contenu mais qu'on a le titre du thread forum → l'utiliser
+  if (!profile.poste && threadTitle) {
+    profile.poste = threadTitle.substring(0, 200);
   }
 
   // Vérifier qu'on a au moins 2 champs remplis pour considérer ça comme un vrai profil

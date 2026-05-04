@@ -60,11 +60,15 @@ async function init() {
       channel_id        TEXT NOT NULL,
       channel_name      TEXT NOT NULL,
       message_id        TEXT NOT NULL UNIQUE,
+      thread_id         TEXT,
       -- Infos contrat parsées
       nom               TEXT,
       prenom            TEXT,
       poste             TEXT,
       entreprise        TEXT,
+      id_employe        TEXT,
+      perso             TEXT,
+      compte            TEXT,
       date_debut        TEXT,
       date_fin          TEXT,
       salaire           TEXT,
@@ -72,6 +76,7 @@ async function init() {
       telephone         TEXT,
       email             TEXT,
       notes             TEXT,
+      photo_url         TEXT,
       raw_content       TEXT,
       -- Statut
       statut            TEXT DEFAULT 'actif',
@@ -90,6 +95,18 @@ async function init() {
       UNIQUE(guild_id, channel_id)
     );
   `);
+
+  // Migration : ajouter les colonnes manquantes si la table existe déjà
+  const migrations = [
+    `ALTER TABLE interim_profiles ADD COLUMN IF NOT EXISTS id_employe TEXT`,
+    `ALTER TABLE interim_profiles ADD COLUMN IF NOT EXISTS perso TEXT`,
+    `ALTER TABLE interim_profiles ADD COLUMN IF NOT EXISTS compte TEXT`,
+    `ALTER TABLE interim_profiles ADD COLUMN IF NOT EXISTS photo_url TEXT`,
+    `ALTER TABLE interim_profiles ADD COLUMN IF NOT EXISTS thread_id TEXT`,
+  ];
+  for (const sql of migrations) {
+    await pool.query(sql).catch(() => {});
+  }
 
   console.log('✅ PostgreSQL prêt');
 }
