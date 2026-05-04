@@ -26,7 +26,6 @@ async function main() {
       GatewayIntentBits.GuildMessageReactions,
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.GuildVoiceStates,
-      GatewayIntentBits.GuildMessageTyping,
     ],
     partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.ThreadMember],
   });
