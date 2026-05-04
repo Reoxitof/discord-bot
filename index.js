@@ -1,57 +1,62 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, Collection, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const db = require('./src/database');
 
-// Serveur HTTP minimal pour Sliplane healthcheck
+// Healthcheck IMMÉDIAT — répond avant même que la DB soit prête
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => {
-  res.writeHead(200);
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('OK');
 }).listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Healthcheck server listening on 0.0.0.0:${PORT}`);
+  console.log(`✅ Healthcheck sur 0.0.0.0:${PORT}`);
 });
 
 async function main() {
-  await db.init();
-  console.log('✅ Base de données initialisée');
+  // Init DB avec retry
+  let dbOk = false;
+  for (let i = 0; i < 5; i++) {
+    try {
+      await db.init();
+      dbOk = true;
+      console.log('✅ Base de données initialisée');
+      break;
+    } catch (e) {
+      console.log(`[DB] Tentative ${i+1}/5 échouée : ${e.message}`);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+  if (!dbOk) console.log('[DB] ⚠️ DB non disponible — le bot continue sans DB');
 
   const client = new Client({
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.GuildMessageReactions,
       GatewayIntentBits.MessageContent,
-      GatewayIntentBits.GuildVoiceStates,
     ],
-    partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.ThreadMember],
+    partials: [Partials.Message, Partials.Channel, Partials.ThreadMember],
   });
 
   client.commands = new Collection();
 
-  // ── Charger les commandes ──────────────────────
+  // Charger les commandes
   const commandsPath = path.join(__dirname, 'src', 'commands');
-  const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
-  for (const file of commandFiles) {
-    const command = require(path.join(commandsPath, file));
-    if (command.name) {
-      client.commands.set(command.name, command);
-      console.log(`  ✅ Commande chargée : !${command.name}`);
+  for (const file of fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'))) {
+    const cmd = require(path.join(commandsPath, file));
+    if (cmd.name) {
+      client.commands.set(cmd.name, cmd);
+      console.log(`  ✅ Commande : !${cmd.name}`);
     }
   }
 
-  // ── Charger les événements ─────────────────────
+  // Charger les événements (supporte export tableau ou objet)
   const eventsPath = path.join(__dirname, 'src', 'events');
-  const eventFiles = fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'));
-  for (const file of eventFiles) {
-    const eventExport = require(path.join(eventsPath, file));
-
-    // Supporte les fichiers qui exportent un tableau d'événements (ex: interimThread.js)
-    const events = Array.isArray(eventExport) ? eventExport : [eventExport];
-
+  for (const file of fs.readdirSync(eventsPath).filter(f => f.endsWith('.js'))) {
+    const exported = require(path.join(eventsPath, file));
+    const events = Array.isArray(exported) ? exported : [exported];
     for (const event of events) {
       if (!event.name) continue;
       if (event.once) {
@@ -59,12 +64,12 @@ async function main() {
       } else {
         client.on(event.name, (...args) => event.execute(...args, client));
       }
-      console.log(`  ✅ Événement chargé : ${event.name} (${file})`);
+      console.log(`  ✅ Événement : ${event.name} (${file})`);
     }
   }
 
-  // ── Connexion ──────────────────────────────────
   await client.login(process.env.BOT_TOKEN);
+  console.log('✅ Bot connecté');
 }
 
 main().catch(err => {
