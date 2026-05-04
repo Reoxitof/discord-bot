@@ -49,16 +49,57 @@ async function init() {
       PRIMARY KEY (message_id, emoji)
     );
   `);
+
+  // Table profils intérimaires — créée séparément pour éviter les conflits
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS interim_profiles (
+      id SERIAL PRIMARY KEY,
+      discord_user_id   TEXT NOT NULL,
+      discord_username  TEXT NOT NULL,
+      guild_id          TEXT NOT NULL,
+      channel_id        TEXT NOT NULL,
+      channel_name      TEXT NOT NULL,
+      message_id        TEXT NOT NULL UNIQUE,
+      -- Infos contrat parsées
+      nom               TEXT,
+      prenom            TEXT,
+      poste             TEXT,
+      entreprise        TEXT,
+      date_debut        TEXT,
+      date_fin          TEXT,
+      salaire           TEXT,
+      adresse           TEXT,
+      telephone         TEXT,
+      email             TEXT,
+      notes             TEXT,
+      raw_content       TEXT,
+      -- Statut
+      statut            TEXT DEFAULT 'actif',
+      created_at        TIMESTAMPTZ DEFAULT NOW(),
+      updated_at        TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  // Table config des salons contrats (noms de salons surveillés)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS contract_channels (
+      id SERIAL PRIMARY KEY,
+      guild_id     TEXT NOT NULL,
+      channel_id   TEXT NOT NULL,
+      channel_name TEXT NOT NULL,
+      UNIQUE(guild_id, channel_id)
+    );
+  `);
+
   console.log('✅ PostgreSQL prêt');
 }
 
 // Helper: convertit les ? en $1, $2...
 function toPg(sql) {
   let i = 0;
-  return sql.replace(/\?/g, () => `$${++i}`);
+  return sql.replace(/\?/g, () => `${++i}`);
 }
 
-// Interface compatible avec l'ancien dbProxy (synchrone simulé via proxy async)
 const db = {
   prepare: (sql) => ({
     run: async (...params) => {
@@ -77,7 +118,7 @@ const db = {
     await pool.query(sql);
   },
   init,
-  save: () => {}, // no-op avec Postgres
+  save: () => {},
   pool,
 };
 

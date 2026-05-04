@@ -1,12 +1,13 @@
 const db = require('../database');
 const { EmbedBuilder } = require('discord.js');
 const { checkMessage } = require('../automod');
+const { isContractChannel, parseContractMessage, buildProfileEmbed } = require('../contractParser');
+const { upsertProfile } = require('../interimManager');
 
 const PREFIX = '!';
 const XP_COOLDOWN = 60000;
 const XP_MIN = 15;
 const XP_MAX = 25;
-// Liens autorisés (domaines whitelist)
 const ALLOWED_DOMAINS = ['twitch.tv', 'youtube.com', 'youtu.be', 'discord.gg/reoxitof'];
 
 module.exports = {
@@ -19,7 +20,7 @@ module.exports = {
     const blocked = await checkMessage(message, client);
     if (blocked) return;
 
-    // ── Anti-lien ─────────────────────────────
+    // ── Anti-lien ─────────────────────────────────
     const hasLink = /(https?:\/\/|discord\.gg\/)/i.test(message.content);
     if (hasLink) {
       const isAllowed = ALLOWED_DOMAINS.some(d => message.content.includes(d));
@@ -34,7 +35,7 @@ module.exports = {
       }
     }
 
-    // ── Anti-spam (5 messages en 5 secondes) ──
+    // ── Anti-spam (5 messages en 5 secondes) ──────
     if (!client.spamMap) client.spamMap = new Map();
     const key = `${message.author.id}-${message.guild.id}`;
     const now = Date.now();
@@ -60,7 +61,13 @@ module.exports = {
     }
     client.spamMap.set(key, userData);
 
-    // ── Système XP ────────────────────────────
+    // ── Détection salon contrat → profil intérimaire ──
+    const channelName = message.channel.name || '';
+    if (isContractChannel(channelName)) {
+      await handleContractMessage(message, client);
+    }
+
+    // ── Système XP ────────────────────────────────
     const row = await db.prepare(
       'SELECT * FROM levels WHERE user_id = ? AND guild_id = ?'
     ).get(message.author.id, message.guild.id);
@@ -93,7 +100,7 @@ module.exports = {
       );
     }
 
-    // ── Commandes ─────────────────────────────
+    // ── Commandes ─────────────────────────────────
     if (!message.content.startsWith(PREFIX)) return;
 
     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
@@ -110,6 +117,49 @@ module.exports = {
     }
   },
 };
+
+/**
+ * Traite un message dans un salon contrat
+ */
+async function handleContractMessage(message, client) {
+  try {
+    const content = message.content.trim();
+
+    // Ignorer les messages trop courts (moins de 20 chars)
+    if (content.length < 20) return;
+
+    const profile = parseContractMessage(content);
+
+    // Pas assez d'infos parsées → on ignore silencieusement
+    if (!profile) return;
+
+    // Sauvegarder en base
+    await upsertProfile({
+      discordUserId:   message.author.id,
+      discordUsername: message.author.tag,
+      guildId:         message.guild.id,
+      channelId:       message.channel.id,
+      channelName:     message.channel.name,
+      messageId:       message.id,
+      profile,
+      rawContent:      content.substring(0, 2000)
+    });
+
+    console.log(`[CONTRAT] Profil enregistré — ${message.author.tag} dans #${message.channel.name}`);
+
+    // Répondre avec un embed de confirmation (éphémère via reply)
+    const embed = buildProfileEmbed(profile, message.author.tag, message.channel.name);
+    const reply = await message.reply({ embeds: [embed] }).catch(() => null);
+
+    // Supprimer la confirmation après 15 secondes pour garder le salon propre
+    if (reply) {
+      setTimeout(() => reply.delete().catch(() => {}), 15000);
+    }
+
+  } catch (err) {
+    console.error('[CONTRAT] Erreur traitement message :', err.message);
+  }
+}
 
 function getXpForLevel(level) {
   return 100 * level * level;
